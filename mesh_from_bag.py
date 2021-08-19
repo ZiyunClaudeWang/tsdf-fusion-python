@@ -49,10 +49,9 @@ def reconstruct(images, depth_images, poses):
 
     # Initialize voxel volume
     print("Initializing voxel volume...")
-    tsdf_vol = fusion.TSDFVolume(vol_bnds, voxel_size=0.002)
+    tsdf_vol = fusion.TSDFVolume(vol_bnds, voxel_size=0.004)
 
     # Loop through RGB-D images and fuse them together
-
     t0_elapse = time.time()
     for i in range(n_imgs):
         print("Fusing frame %d/%d"%(i+1, n_imgs))
@@ -66,6 +65,7 @@ def reconstruct(images, depth_images, poses):
         cam_pose = poses[i]
         cam_pose = np.concatenate((cam_pose, padding), axis=0)
         cam_pose = np.linalg.inv(cam_pose)
+
         tsdf_vol.integrate(color_image, depth_im, cam_intr, cam_pose, obs_weight=1.)
 
     fps = n_imgs / (time.time() - t0_elapse)
@@ -73,6 +73,8 @@ def reconstruct(images, depth_images, poses):
 
     # Get mesh from voxel volume and save to disk (can be viewed with Meshlab)
     print("Saving mesh to mesh.ply...")
+
+    # points on the ground should be removed
     verts, faces, norms, colors = tsdf_vol.get_mesh()
     fusion.meshwrite("mesh.ply", verts, faces, norms, colors)
 
@@ -87,7 +89,7 @@ def reconstruct(images, depth_images, poses):
 
 if __name__ == "__main__":
 
-    bag_path = "/home/claude/Documents/research/tagslam/merged.bag"
+    bag_path = "/home/claude/Documents/research/tagslam/merge_board.bag"
 
     bridge = CvBridge()
 
@@ -135,6 +137,7 @@ if __name__ == "__main__":
     all_color_t = np.array(all_color_t)
 
     # find the closest pose and reconstruct
+    '''
     color_match = []
     depth_match = []
 
@@ -151,7 +154,89 @@ if __name__ == "__main__":
 
 
         #print(i, color_t_idx, depth_t_idx)
-    reconstruct(color_match, depth_match, all_pose)
+        print(color_t_idx, target_t)
+        cv_image = np.array(all_color[color_t_idx])
+
+        t_cam_table = all_pose[i]
+        cf = np.array([[0, 0, 0],
+                            [0.1, 0, 0],
+                            [0, 0.1, 0],
+                            [0, 0, 0.1]]).T
+        cf = np.concatenate((cf, np.ones([1, 4])), axis=0)
+        cf_cam = t_cam_table.dot(cf)
+
+        # project points
+        cf_pj = cam_intr.dot(cf_cam[:3, :])
+
+        cf_pj = cf_pj / (1e-9 + cf_pj[2:3, :])
+
+        # draw line
+        cf_pj = cf_pj.T
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[1, 0]), int(cf_pj[1, 1])), 
+                                            (255, 0, 0), 3)
+
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[2, 0]), int(cf_pj[2, 1])), 
+                                            (0, 255, 0), 3)
+
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[3, 0]), int(cf_pj[3, 1])), 
+                                            (0, 0, 255), 3)
+        cv2.imshow('image', cv_image)
+        cv2.waitKey(0)
+    '''
+    color_match = []
+    depth_match = []
+    pose_match = []
+
+    for i in range(100):
+        depth_match.append(all_depth[i])
+
+        target_t = all_color_t[i]
+        diff_pose_t = np.abs(all_pose_t - target_t)
+        pose_t_idx = np.argmin(diff_pose_t)
+
+        diff_color_t = np.abs(all_color_t - target_t)
+        color_t_idx = np.argmin(diff_color_t)
+
+        pose_match.append(all_pose[pose_t_idx])
+        color_match.append(all_color[color_t_idx])
+
+        cv_image = np.array(all_color[color_t_idx])
+
+        # project a list of points based on pose estimate and K
+        t_cam_table = all_pose[pose_t_idx]
+        cf = np.array([[0, 0, 0],
+                            [0.1, 0, 0],
+                            [0, 0.1, 0],
+                            [0, 0, 0.1]]).T
+        cf = np.concatenate((cf, np.ones([1, 4])), axis=0)
+        cf_cam = t_cam_table.dot(cf)
+
+        # project points
+        cf_pj = cam_intr.dot(cf_cam[:3, :])
+
+        cf_pj = cf_pj / (1e-9 + cf_pj[2:3, :])
+
+        # draw line
+        cf_pj = cf_pj.T
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[1, 0]), int(cf_pj[1, 1])), 
+                                            (255, 0, 0), 3)
+
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[2, 0]), int(cf_pj[2, 1])), 
+                                            (0, 255, 0), 3)
+
+        cv_image = cv2.line(cv_image, (int(cf_pj[0, 0]), int(cf_pj[0, 1])), 
+                                            (int(cf_pj[3, 0]), int(cf_pj[3, 1])), 
+                                            (0, 0, 255), 3)
+
+        cv2.imshow('image', cv_image)
+        cv2.waitKey(0)
+
+    reconstruct(color_match, depth_match, pose_match)
 
 
 

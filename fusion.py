@@ -33,7 +33,8 @@ class TSDFVolume:
     # Define voxel volume parameters
     self._vol_bnds = vol_bnds
     self._voxel_size = float(voxel_size)
-    self._trunc_margin = 5 * self._voxel_size  # truncation on SDF
+    #self._trunc_margin = 5 * self._voxel_size  # truncation on SDF
+    self._trunc_margin = 2 * self._voxel_size  # truncation on SDF
     self._color_const = 256 * 256
 
     # Adjust volume bounds and ensure C-order contiguous
@@ -94,6 +95,8 @@ class TSDFVolume:
           float pt_x = vol_origin[0]+voxel_x*voxel_size;
           float pt_y = vol_origin[1]+voxel_y*voxel_size;
           float pt_z = vol_origin[2]+voxel_z*voxel_size;
+          //if (pt_z < 0)
+          //  return;
           // World coordinates to camera coordinates
           float tmp_pt_x = pt_x-cam_pose[0*4+3];
           float tmp_pt_y = pt_y-cam_pose[1*4+3];
