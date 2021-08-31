@@ -95,7 +95,7 @@ class TSDFVolume:
           float pt_x = vol_origin[0]+voxel_x*voxel_size;
           float pt_y = vol_origin[1]+voxel_y*voxel_size;
           float pt_z = vol_origin[2]+voxel_z*voxel_size;
-          //if (pt_z < 0)
+          //if (pt_z < -0.1)
           //  return;
           // World coordinates to camera coordinates
           float tmp_pt_x = pt_x-cam_pose[0*4+3];

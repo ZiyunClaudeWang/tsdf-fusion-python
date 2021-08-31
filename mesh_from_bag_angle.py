@@ -51,14 +51,14 @@ def plot_axis(cv_image, t_cam_table):
     return cv_image
 
 
-def reconstruct(images, depth_images, poses):
+def reconstruct(images, depth_images, poses, obj_name):
 
     print("Estimating voxel volume bounds...")
     #n_imgs = len(images)
     n_imgs = len(images)
 
     vol_bnds = np.zeros((3,2))
-    depth_threshold = .45
+    depth_threshold = .6
 
     for i in range(n_imgs):
         # Read depth image and camera pose
@@ -104,21 +104,33 @@ def reconstruct(images, depth_images, poses):
 
     # points on the ground should be removed
     verts, faces, norms, colors = tsdf_vol.get_mesh()
-    fusion.meshwrite("mesh.ply", verts, faces, norms, colors)
+    fusion.meshwrite("{}.ply".format(obj_name), verts, faces, norms, colors)
 
     # Get point cloud from voxel volume and save to disk (can be viewed with Meshlab)
     print("Saving point cloud to pc.ply...")
     point_cloud = tsdf_vol.get_point_cloud()
-    #fusion.pcwrite("pc.ply", point_cloud)
+    fusion.pcwrite("{}_pc.ply".format(obj_name), point_cloud)
 
+    '''
     pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(point_cloud[:, :3]))
     pcd.colors = o3d.utility.Vector3dVector(point_cloud[:, 3:]/255)
     o3d.visualization.draw_geometries([pcd])
+    '''
 
 if __name__ == "__main__":
 
+    '''
     bag_path = "/home/claude/Documents/data/mesh_recons/test/soup_no_tag.bag"
     pose_dict_path = "/home/claude/Documents/data/mesh_recons/test/recons_data_2021-08-18-20-22-37.pkl"
+    '''
+    bag_path = "/home/claude/Documents/data/mesh_recons/2021-08-30/objects/beer.bag"
+    pose_dict_path = "/home/claude/Documents/data/mesh_recons/2021-08-30/match_pose_100.pkl"
+
+    '''
+    bag_path = "/home/claude/Documents/data/mesh_recons/2021-08-30/match_angle_to_pose.bag"
+    pose_dict_path = "/home/claude/Documents/data/mesh_recons/2021-08-30/match_angle_to_pose.pkl"
+    '''
+
 
     with open(pose_dict_path, 'rb') as f:
         pose_dict = pickle.load(f)
@@ -193,16 +205,16 @@ if __name__ == "__main__":
 
         # project a list of points based on pose estimate and K
         t_cam_table = all_pose[pose_t_idx]
-        '''
         cv_image = plot_axis(cv_image, t_cam_table)
         #cv_image = plot_axis(cv_image, t_cam_table_good)
 
+        '''
         cv2.imshow('image', cv_image)
         cv2.waitKey(0)
         '''
 
     print(len(color_match), len(depth_match), len(pose_match))
-    reconstruct(color_match, depth_match, pose_match)
+    reconstruct(color_match, depth_match, pose_match, obj_name = bag_path.strip(".bag"))
 
 
 
